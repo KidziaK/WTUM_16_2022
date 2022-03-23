@@ -3,8 +3,17 @@ import pandas as pd
 
 
 if __name__ == "__main__":
+    """ Folder Structure
+    |--WTUM
+    |   |--main.py
+    |   |--Data
+    |   |   |--customers.csv
+    |   |   |--articles.csv
+    |   |   |--transactions_train.csv
+    |   |--Models
+    """
 
-    # Load data
+    # Load data 
     customers = pd.read_csv("./Dane/customers.csv")
 
     # Change NaN to 0 in customers table
