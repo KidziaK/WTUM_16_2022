@@ -3,7 +3,7 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from scipy.sparse import csr_matrix
 import tensorflow as tf
-from Models.CDAE import CDAE 
+from Models.CDAE2 import CDAE 
 
 
 def load_data_all(path="./Data/transactions_simple.csv", header=['id', 'customer_id', 'article_id'],
@@ -235,4 +235,3 @@ if __name__ == "__main__":
         model.build_network()
         model.execute(train_data, test_data)
 
-    
