@@ -6,9 +6,15 @@ import tensorflow as tf
 from Models.CDAE import CDAE 
 
 
-def load_data_all(path="./Data/transactions_simple.csv", header=['id','customer_id', 'article_id'],
+def load_data_all(path="./Data/transactions_simple.csv", header=['id', 'customer_id', 'article_id'],
                   test_size=0.2, sep=","):
     df = pd.read_csv(path, sep=sep, names=header, engine='python')
+
+    cusotmers_dict = dict((y,x+1) for x,y in enumerate(sorted(set(df.customer_id))))
+    acrticles_dict = dict((y,x+1) for x,y in enumerate(sorted(set(df.article_id))))
+
+    df.customer_id =  pd.Series([cusotmers_dict[x] for x in df.customer_id]).reset_index(drop=True)
+    df.article_id = pd.Series([acrticles_dict[x] for x in df.article_id]).reset_index(drop=True)
 
     n_users = df.customer_id.unique().shape[0]
     n_items = df.article_id.unique().shape[0]
@@ -23,8 +29,8 @@ def load_data_all(path="./Data/transactions_simple.csv", header=['id','customer_
 
     train_dict = {}
     for line in train_data.itertuples():
-        u = line[1] - 1
-        i = line[2] - 1
+        u = line[2] - 1
+        i = line[3] - 1
         train_dict[(u, i)] = 1
 
     for u in range(n_users):
@@ -48,8 +54,8 @@ def load_data_all(path="./Data/transactions_simple.csv", header=['id','customer_
     test_col = []
     test_rating = []
     for line in test_data.itertuples():
-        test_row.append(line[1] - 1)
-        test_col.append(line[2] - 1)
+        test_row.append(line[2] - 1)
+        test_col.append(line[3] - 1)
         test_rating.append(1)
     test_matrix = csr_matrix((test_rating, (test_row, test_col)), shape=(n_users, n_items))
 
@@ -62,19 +68,21 @@ def load_data_all(path="./Data/transactions_simple.csv", header=['id','customer_
     return train_interaction_matrix, test_dict, n_users, n_items
 
 
-def load_data_neg(path="./Data/transactions_simple.csv", header=['customer_id', 'article_id'],
+def load_data_neg(path="./Data/transactions_simple.csv", header=['id', 'customer_id', 'article_id'],
                   test_size=0.2, sep=","):
     df = pd.read_csv(path, sep=sep, names=header, engine='python')
-    df = pd.read_csv("./Data/transactions_simple.csv", sep=",", names=['customer_id', 'article_id'], engine='python')
+ 
     
-    df.customer_id = df.customer_id.apply(lambda row: abs(hash(row) % (10 ** 9)))
-    df.article_id = pd.to_numeric(df.article_id)
-    print(df.customer_id)
-    print(df.article_id)
+
+    cusotmers_dict = dict((y,x+1) for x,y in enumerate(sorted(set(df.customer_id))))
+    acrticles_dict = dict((y,x+1) for x,y in enumerate(sorted(set(df.article_id))))
+
+    df.customer_id =  pd.Series([cusotmers_dict[x] for x in df.customer_id]).reset_index(drop=True)
+    df.article_id = pd.Series([acrticles_dict[x] for x in df.article_id]).reset_index(drop=True)
     
     n_users = df.customer_id.unique().shape[0]
     n_items = df.article_id.unique().shape[0]
-    
+
     train_data, test_data = train_test_split(df, test_size=test_size)
     train_data = pd.DataFrame(train_data)
     test_data = pd.DataFrame(test_data)
@@ -84,8 +92,8 @@ def load_data_neg(path="./Data/transactions_simple.csv", header=['customer_id', 
     train_rating = []
 
     for line in train_data.itertuples():
-        u = line[1] - 1
-        i = line[2] - 1
+        u = line[2] - 1
+        i = line[3] - 1
         train_row.append(u)
         train_col.append(i)
         train_rating.append(1)
@@ -100,8 +108,8 @@ def load_data_neg(path="./Data/transactions_simple.csv", header=['customer_id', 
     test_col = []
     test_rating = []
     for line in test_data.itertuples():
-        test_row.append(line[1] - 1)
-        test_col.append(line[2] - 1)
+        test_row.append(line[2] - 1)
+        test_col.append(line[3] - 1)
         test_rating.append(1)
     test_matrix = csr_matrix((test_rating, (test_row, test_col)), shape=(n_users, n_items))
 
@@ -128,8 +136,8 @@ def load_data_separately(path_train=None, path_test=None, path_val=None, header=
         train_rating = []
 
         for line in train_data.itertuples():
-            u = line[1]  # - 1
-            i = line[2]  # - 1
+            u = line[2]  # - 1
+            i = line[3]  # - 1
             train_row.append(u)
             train_col.append(i)
             train_rating.append(1)
@@ -144,8 +152,8 @@ def load_data_separately(path_train=None, path_test=None, path_val=None, header=
         test_col = []
         test_rating = []
         for line in test_data.itertuples():
-            test_row.append(line[1])
-            i = line[2]  # - 1
+            test_row.append(line[2])
+            i = line[3]  # - 1
             test_col.append(i)
             test_rating.append(1)
 
@@ -175,8 +183,8 @@ if __name__ == "__main__":
     |   |   |--transactions_train.csv
     |   |--Models
     """
-    print("wczytywanie danych")
-    # Load data 
+    # print("wczytywanie danych")
+    # # Load data 
     # customers = pd.read_csv("./Data/customers.csv")
 
     # # Change NaN to 0 in customers table
@@ -186,9 +194,9 @@ if __name__ == "__main__":
     # articles = pd.read_csv("./Data/articles.csv")        
 
     # transactions = pd.read_csv("./Data/transactions_train.csv") 
-    print("Tworzenie mniejszych zbiorow danych")
+    # print("Tworzenie mniejszych zbiorow danych")
     
-    n = 100
+    # n = 100
     # articles_simple = articles.iloc[1:n,]
     
     # transactions_simple = transactions.merge(articles_simple, on="article_id").loc[:,list(transactions.columns)]
@@ -219,7 +227,11 @@ if __name__ == "__main__":
         pass
     
     model = None
-    train_data, test_data, n_user, n_item = load_data_all(test_size=0.2, sep="\t")
+    train_data, test_data, n_user, n_item = load_data_all(test_size=0.2, sep=",")
     model = CDAE(n_user, n_item)
+
+    if model is not None:
+        model.build_network()
+        model.execute(train_data, test_data)
 
     
