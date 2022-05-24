@@ -6,11 +6,21 @@ import tensorflow as tf
 import time
 import numpy as np
 import math
-# from utils.evaluation.RankingMetrics import evaluate
 
 class CDAE(object):
-    def __init__(self, sess, num_user, num_item, learning_rate=0.01, reg_rate=0.01, epoch=500, batch_size=100,
-                 verbose=False, t=1, display_step=1000):
+    def __init__(self, 
+                 sess: tf.compat.v1.Session, 
+                 num_user: int, 
+                 num_item: int, 
+                 learning_rate: float = 0.01, 
+                 reg_rate: float = 0.01, 
+                 epoch: int = 500, 
+                 batch_size: int = 100,
+                 verbose: bool = False, 
+                 t: int = 1, 
+                 display_step: int = 1000, 
+                 path: str = ""):
+
         self.sess = sess
         self.num_user = num_user
         self.num_item = num_item
@@ -21,6 +31,7 @@ class CDAE(object):
         self.verbose = verbose
         self.T = t
         self.display_step = display_step
+        self.path = path
 
         self.user_id = None
         self.corrupted_rating_matrix = None
@@ -38,41 +49,46 @@ class CDAE(object):
         self.reconstruction = None
         print("You are running CDAE.")
 
-    def build_network(self, hidden_neuron=500, corruption_level=0):
-        self.corrupted_rating_matrix = tf.placeholder(dtype=tf.float32, shape=[None, self.num_item])
-        self.rating_matrix = tf.placeholder(dtype=tf.float32, shape=[None, self.num_item])
-        self.user_id = tf.placeholder(dtype=tf.int32, shape=[None])
+    def build_network(self, 
+                      hidden_neuron: int = 500, 
+                      corruption_level: int = 0) -> None:
+
+        self.corrupted_rating_matrix = tf.compat.v1.placeholder(dtype=tf.float32, shape=[None, self.num_item])
+        self.rating_matrix = tf.compat.v1.placeholder(dtype=tf.float32, shape=[None, self.num_item])
+        self.user_id = tf.compat.v1.placeholder(dtype=tf.int32, shape=[None])
         self.corruption_level = corruption_level
 
-        _W = tf.Variable(tf.random_normal([self.num_item, hidden_neuron], stddev=0.01))
-        _W_prime = tf.Variable(tf.random_normal([hidden_neuron, self.num_item], stddev=0.01))
-        _V = tf.Variable(tf.random_normal([self.num_user, hidden_neuron], stddev=0.01))
+        _W = tf.Variable(tf.random.normal([self.num_item, hidden_neuron], stddev=0.01))
+        _W_prime = tf.Variable(tf.random.normal([hidden_neuron, self.num_item], stddev=0.01))
+        _V = tf.Variable(tf.random.normal([self.num_user, hidden_neuron], stddev=0.01))
 
-        b = tf.Variable(tf.random_normal([hidden_neuron], stddev=0.01))
-        b_prime = tf.Variable(tf.random_normal([self.num_item], stddev=0.01))
-        print(np.shape(tf.matmul(self.corrupted_rating_matrix, _W)))
-        print(np.shape(tf.nn.embedding_lookup(_V, self.user_id)))
-        layer_1 = tf.sigmoid(tf.matmul(self.corrupted_rating_matrix, _W) + tf.nn.embedding_lookup(_V, self.user_id) + b)
+        b = tf.Variable(tf.random.normal([hidden_neuron], stddev=0.01))
+        b_prime = tf.Variable(tf.random.normal([self.num_item], stddev=0.01))
+
+        layer_1 = tf.sigmoid(tf.matmul(self.corrupted_rating_matrix, _W) + tf.nn.embedding_lookup(params=_V, ids=self.user_id) + b)
         self.layer_2 = tf.sigmoid(tf.matmul(layer_1, _W_prime) + b_prime)
 
         self.loss = - tf.reduce_sum(
-            self.rating_matrix * tf.log(self.layer_2) + (1 - self.rating_matrix) * tf.log(1 - self.layer_2)) + \
+            input_tensor=self.rating_matrix * tf.math.log(self.layer_2) + (1 - self.rating_matrix) * tf.math.log(1 - self.layer_2)) + \
             self.reg_rate * (tf.nn.l2_loss(_W) + tf.nn.l2_loss(_W_prime) + tf.nn.l2_loss(_V) +
                              tf.nn.l2_loss(b) + tf.nn.l2_loss(b_prime))
 
-        self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.loss)
+        self.optimizer = tf.compat.v1.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.loss)
 
-    def prepare_data(self, train_data, test_data):
+    def prepare_data(self, 
+                     train_data: dict, 
+                     test_data: dict) -> None:
+
         self.train_data = self._data_process(train_data)
         self.neg_items = self._get_neg_items(train_data)
         self.num_training = self.num_user
         self.total_batch = int(self.num_training / self.batch_size)
         self.test_data = test_data
         self.test_users = set([u for u in self.test_data.keys() if len(self.test_data[u]) > 0])
-        print("data preparation finished.")
+        print("Data preparation finished.")
 
-    def train(self):
-        idxs = np.random.permutation(self.num_training)  # shuffled ordering
+    def train(self) -> None:
+        idxs = np.random.permutation(self.num_training)  
 
         for i in range(self.total_batch):
             start_time = time.time()
@@ -92,15 +108,18 @@ class CDAE(object):
                 if self.verbose:
                     print("one iteration: %s seconds." % (time.time() - start_time))
 
-    def test(self):
+    def test(self) -> None:
         self.reconstruction = self.sess.run(self.layer_2, feed_dict={self.corrupted_rating_matrix: self.train_data,
                                                                      self.user_id: range(self.num_user)})
 
         evaluate(self)
 
-    def execute(self, train_data, test_data):
+    def execute(self, 
+                train_data: dict, 
+                test_data: dict) -> None:
+
         self.prepare_data(train_data, test_data)
-        init = tf.global_variables_initializer()
+        init = tf.compat.v1.global_variables_initializer()
         self.sess.run(init)
         for epoch in range(self.epochs):
             self.train()
@@ -108,33 +127,38 @@ class CDAE(object):
                 print("Epoch: %04d; " % epoch, end='')
                 self.test()
 
-    def save(self, path):
-        saver = tf.train.Saver()
-        saver.save(self.sess, path)
+    def save(self, 
+             name: str) -> None:
 
-    def predict(self, user_id, item_id):
+        saver = tf.compat.v1.train.Saver()
+        saver.save(self.sess, self.path + name)
+
+    def predict(self, 
+                user_id: int, 
+                item_id: int) -> None:
         return np.array(self.reconstruction[np.array(user_id), np.array(item_id)])
 
     @staticmethod
-    def _data_process(data):
+    def _data_process(data: dict) -> np.matrix:
         return np.asmatrix(data)
 
-    def _get_neg_items(self, data):
+    def _get_neg_items(self, 
+                       data: dict) -> dict:
         neg_items = {}
         for u in range(self.num_user):
             neg_items[u] = [k for k, i in enumerate(data[u]) if data[u][k] == 0]
-            # print(neg_items[u])
 
         return neg_items
 
     @staticmethod
-    def _get_corrupted_input(input_train_data, corruption_level):
+    def _get_corrupted_input(input_train_data: np.number, 
+                             corruption_level: np.number) -> np.number:
+
         return np.random.binomial(n=1, p=1 - corruption_level) * input_train_data
 
-
-
-
-def precision_recall_ndcg_at_k(k, rankedlist, test_matrix):
+def precision_recall_ndcg_at_k(k: int, 
+                               rankedlist: list, 
+                               test_matrix: np.matrix) -> float:
     idcg_k = 0
     dcg_k = 0
     n_k = k if len(test_matrix) > k else len(test_matrix)
@@ -152,8 +176,8 @@ def precision_recall_ndcg_at_k(k, rankedlist, test_matrix):
 
     return float(count / k), float(count / len(test_matrix)), float(dcg_k / idcg_k)
 
-
-def map_mrr_ndcg(rankedlist, test_matrix):
+def map_mrr_ndcg(rankedlist: list, 
+                 test_matrix: np.matrix):
     ap = 0
     map = 0
     dcg = 0
@@ -180,8 +204,7 @@ def map_mrr_ndcg(rankedlist, test_matrix):
 
     return map, mrr, float(dcg / idcg)
 
-
-def evaluate(self):
+def evaluate(self) -> None:
     pred_ratings_10 = {}
     pred_ratings_5 = {}
     pred_ratings = {}
@@ -199,16 +222,12 @@ def evaluate(self):
         user_ids = []
         user_neg_items = self.neg_items[u]
         item_ids = []
-        # scores = []
+
         for j in user_neg_items:
             item_ids.append(j)
             user_ids.append(u)
 
         scores = self.predict(user_ids, item_ids)
-        # print(type(scores))
-        # print(scores)
-        # print(np.shape(scores))
-        # print(ratings)
         neg_item_index = list(zip(item_ids, scores))
 
         ranked_list[u] = sorted(neg_item_index, key=lambda tup: tup[1], reverse=True)
@@ -229,13 +248,14 @@ def evaluate(self):
         mrr.append(mrr_u)
         ndcg.append(ndcg_u)
 
-    print("------------------------")
-    print("precision@10:" + str(np.mean(p_at_10)))
-    print("recall@10:" + str(np.mean(r_at_10)))
-    print("precision@5:" + str(np.mean(p_at_5)))
-    print("recall@5:" + str(np.mean(r_at_5)))
-    print("map:" + str(np.mean(map)))
-    print("mrr:" + str(np.mean(mrr)))
-    print("ndcg:" + str(np.mean(ndcg)))
-    print("ndcg@5:" + str(np.mean(ndcg_at_5)))
-    print("ndcg@10:" + str(np.mean(ndcg_at_10)))
+    with open(self.path + "results.txt", "a") as file:
+        file.write("------------------------\n")
+        file.write("precision@10:" + str(np.mean(p_at_10)) + "\n")
+        file.write("recall@10:" + str(np.mean(r_at_10)) + "\n")
+        file.write("precision@5:" + str(np.mean(p_at_5)) + "\n")
+        file.write("recall@5:" + str(np.mean(r_at_5)) + "\n")
+        file.write("map:" + str(np.mean(map)) + "\n")
+        file.write("mrr:" + str(np.mean(mrr)) + "\n")
+        file.write("ndcg:" + str(np.mean(ndcg)) + "\n")
+        file.write("ndcg@5:" + str(np.mean(ndcg_at_5)) + "\n")
+        file.write("ndcg@10:" + str(np.mean(ndcg_at_10)) + "\n")

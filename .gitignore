@@ -1,2 +1,3 @@
-
-*.csv
+data/
+models/trained/
+documentation/img
