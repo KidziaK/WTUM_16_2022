@@ -4,6 +4,12 @@ import numpy as np
 
 if __name__ == "__main__":
 
+    file =  open('configuration.json')
+
+    config = json.load(file)
+
+    file.close()
+
     print("Loading customers")
     customers = pd.read_csv("./Data/customers.csv")
 
@@ -21,7 +27,7 @@ if __name__ == "__main__":
     transactions_simple = subset_data(customers=customers,
                 articles=articles,
                 transactions=transactions,
-                n=20,
+                n=config["preprocessing_n"],
                 output_path='./Data')
 
     print("Unhashing")

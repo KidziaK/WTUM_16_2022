@@ -2,5 +2,6 @@
     "epoch": 1,
     "transaction_table_name": "transactions_simple.csv",
     "test_size": 0.2,
-    "column_names": []
+    "column_names": [],
+    "preprocess_n": 20
 }
