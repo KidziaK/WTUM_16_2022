@@ -15,8 +15,8 @@ if __name__ == "__main__":
     file.close()
 
     try:
-        gpus = tf.config.experimental.list_physical_devices('GPU')
-        tf.config.experimental.set_memory_growth(gpus[0], True)
+        gpus = tf.config.list_physical_devices('GPU')
+        tf.config.set_memory_growth(gpus[0], True)
     except:
         print("Couldn't use GPU.")
         pass

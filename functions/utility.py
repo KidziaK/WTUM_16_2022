@@ -5,7 +5,7 @@ from sklearn.model_selection import train_test_split
 from scipy.sparse import csr_matrix
 
 def transform_hash_to_number(df: pd.DataFrame,
-                       columns: list) -> pd.DataFrame:
+                             columns: list) -> pd.DataFrame:
     """ Transform data frame columns containing hash strings to
     numeric values"""
     
@@ -123,5 +123,40 @@ def load_data_neg(path="./data/transactions_simple.csv",
     print("Load data finished. Number of users:", n_users, "Number of items:", n_items)
     return train_matrix.todok(), test_dict, n_users, n_items
 
-#TODO add function for model loading
-# + add srcipt for running saved models
+
+def subset_data(customers: pd.DataFrame,
+                articles: pd.DataFrame,
+                transactions: pd.DataFrame,
+                n: int,
+                output_path: str):
+
+    articles_simple = articles.iloc[1:n,]
+
+    transactions_simple = transactions.merge(articles_simple, on="article_id").loc[:,list(transactions.columns)]
+
+    customers_simple = customers.merge(transactions_simple, on="customer_id").loc[:,list(customers.columns)].drop_duplicates("customer_id")
+
+    transactions_simple[['customer_id','article_id']].to_csv(output_path + "/transactions_" + str(n) + ".csv")
+    customers_simple.to_csv(output_path + "/customers_" + str(n) + ".csv")
+    articles_simple.to_csv(output_path + "/articles_" + str(n) + ".csv")
+
+    return transactions_simple
+
+def save_name_dict_to_csv(df: pd.DataFrame,
+                          output_path: str):
+
+    name_dictionary_df = pd.DataFrame(
+        {'article_original': [],
+         'article_new': []})
+
+    for column in ["customer_id", "article_id"]:
+        name_dictionary = dict((y,x+1) for x,y in enumerate(sorted(set(df[column]))))
+        df[column] = pd.Series([name_dictionary[x] for x in df[column]]).reset_index(drop=True)
+
+    for key, val in name_dictionary.items():
+        name_dictionary_df
+        name_dictionary_df.loc[len(name_dictionary_df.index)] = [key, val]
+
+    name_dictionary_df = name_dictionary_df.astype('int')
+ 
+    name_dictionary_df.to_csv(output_path)
